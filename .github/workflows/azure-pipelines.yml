@@ -63,4 +63,3 @@ steps:
     conn.close();
     "
   displayName: 'Validate schema update'
-has context menu
