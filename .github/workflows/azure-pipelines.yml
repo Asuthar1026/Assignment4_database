@@ -1,30 +1,66 @@
 trigger:
-- main
-
+  branches:
+    include:
+      - main
+ 
 pool:
   vmImage: 'ubuntu-latest'
-
+ 
 variables:
-  AZURE_SQL_SERVER: 'astha-db.mysql.database.azure.com'
-  DATABASE_NAME: 'assignment4db'
- SQL_USERNAME: 'root_astha'
-  SQL_PASSWORD: 'Secret55'
-
+  AZURE_SQL_CONNECTION_STRING: 'astha-db.mysql.database.azure.com'
+ 
 steps:
-- task: SqlAzureDacpacDeployment@1
+- task: UsePythonVersion@0
   inputs:
-    azureSubscription: 'Azure Service Connection'
-    ServerName: '$(AZURE_SQL_SERVER)'
-    DatabaseName: '$(DATABASE_NAME)'
-    SqlUsername: '$(SQL_USERNAME)'
-    SqlPassword: '$(SQL_PASSWORD)'
-    SqlFile: 'create_table.sql'
-
+    versionSpec: '3.x'
+ 
 - script: |
-    sqlcmd -S $(AZURE_SQL_SERVER) -d $(DATABASE_NAME) -U $(SQL_USERNAME) -P $(SQL_PASSWORD) -i update_table.sql
+    pip install mysql-connector-python
+  displayName: 'Install MySQL Connector'
+ 
+- script: |
+    python -c "
+    import mysql.connector;
+    conn = mysql.connector.connect(host='astha-db.mysql.database.azure.com',
+    user='root_astha',
+    password='Secret55',
+    database='assignment4db');
+    cursor = conn.cursor();
+    with open('create_table.sql', 'r') as file:
+        cursor.execute(file.read());
+    conn.close();
+    "
+  displayName: 'Run create_table.sql'
+ 
+- script: |
+    python -c "
+    import mysql.connector;
+    conn = mysql.connector.connect(host='astha-db.mysql.database.azure.com',
+    user='root_astha',
+    password='Secret55',
+    database='assignment4db');
+    cursor = conn.cursor();
+    with open('update_table.sql', 'r') as file:
+        cursor.execute(file.read());
+    conn.close();
+    "
   displayName: 'Run update_table.sql'
-
+ 
 - script: |
-    sqlcmd -S $(AZURE_SQL_SERVER) -d $(DATABASE_NAME) -U $(SQL_USERNAME) -P $(SQL_PASSWORD) -Q "SELECT Email FROM sys.columns WHERE Name = 'Email'"
-  displayName: 'Validate Schema Update'
-
+    python -c "
+    import mysql.connector;
+    conn = mysql.connector.connect(host='astha-db.mysql.database.azure.com',
+    user='root_astha',
+    password='Secret55',
+    database='assignment4db');
+    cursor = conn.cursor();
+    cursor.execute(\"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'Contact';\");
+    result = cursor.fetchone();
+    if result:
+        print('Column exists: Validation successful.');
+    else:
+        raise Exception('Validation failed: Column does not exist.');
+    conn.close();
+    "
+  displayName: 'Validate schema update'
+has context menu
