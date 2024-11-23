@@ -1,0 +1,30 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  AZURE_SQL_SERVER: 'astha-db.mysql.database.azure.com'
+  DATABASE_NAME: 'assignment4db'
+ SQL_USERNAME: 'root_astha'
+  SQL_PASSWORD: 'Secret55'
+
+steps:
+- task: SqlAzureDacpacDeployment@1
+  inputs:
+    azureSubscription: 'Azure Service Connection'
+    ServerName: '$(AZURE_SQL_SERVER)'
+    DatabaseName: '$(DATABASE_NAME)'
+    SqlUsername: '$(SQL_USERNAME)'
+    SqlPassword: '$(SQL_PASSWORD)'
+    SqlFile: 'create_table.sql'
+
+- script: |
+    sqlcmd -S $(AZURE_SQL_SERVER) -d $(DATABASE_NAME) -U $(SQL_USERNAME) -P $(SQL_PASSWORD) -i update_table.sql
+  displayName: 'Run update_table.sql'
+
+- script: |
+    sqlcmd -S $(AZURE_SQL_SERVER) -d $(DATABASE_NAME) -U $(SQL_USERNAME) -P $(SQL_PASSWORD) -Q "SELECT Email FROM sys.columns WHERE Name = 'Email'"
+  displayName: 'Validate Schema Update'
+
